@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmtUpdate = $pdo->prepare($sqlUpdate);
     if ($stmtUpdate->execute($params)) {
-        header("Location: lista_usuarios.php");
+        header("Location: listar-usuarios.php");
         exit();
     } else {
         echo "<div class='text-red-600 text-center mt-6 font-semibold'>Erro ao atualizar usuário.</div>";

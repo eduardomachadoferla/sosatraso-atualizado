@@ -1,182 +1,231 @@
-   <?php
-        include('../config/conexao.php');
+<?php
+    // Inicia sessão (necessário para autenticação e PDF)
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-        if (!isset($_SESSION['login']['auth'])) {
-            header("Location: " . BASE_URL . 'login.php');
-        }
+    include('../config/conexao.php');
 
-        
-        $limit = 20;
-        $atual = isset($_GET['pagination']) ? $limit * (int)$_GET['pagination'] : 0;
-        $sql2 = 'Select * from turmas';
-        $stmt2 = $pdo->prepare($sql2);
-        $stmt2->execute();
-        $turmas = $stmt2->fetchAll();
+    // Proteção de rota
+    if (!isset($_SESSION['login']['auth'])) {
+        header("Location: " . BASE_URL . 'login.php');
+        exit;
+    }
 
-        $sqlRelatorio_sql = "SELECT * FROM sosatraso WHERE ";
+    // ====== PARÂMETROS DE FILTRO (aceita POST e GET) ======
+    $filterTurma = isset($_POST['turma']) ? $_POST['turma'] : (isset($_GET['turma']) ? $_GET['turma'] : '');
+    $filterData1 = isset($_POST['data1']) ? $_POST['data1'] : (isset($_GET['data1']) ? $_GET['data1'] : '');
+    $filterData2 = isset($_POST['data2']) ? $_POST['data2'] : (isset($_GET['data2']) ? $_GET['data2'] : '');
 
-        if( isset($_POST['turma']) && !empty($_POST['turma']) || isset($_GET['turma']) && !empty($_GET['turma']) ){
-            $turma = isset($_POST['turma']) ? $_POST['turma'] : $_GET['turma'];
-            $sqlRelatorio_sql .= "turma = '". $turma."'";
-            
-            if(isset($_POST['data1']) && !empty($_POST['data1'])){
-                if($_POST['data1'] && $_POST['data2']){
-                    $sqlRelatorio_sql .= " and data BETWEEN '". $_POST['data1']. " 00:00:00' AND '". $_POST['data2']. " 23:59:59'";
-                }else{
-                    $sqlRelatorio_sql .= " and data BETWEEN '". $_POST['data1']. " 00:00:00' AND '". $_POST['data1']. " 23:59:59'";
-                }
-            }
-        } else if (isset($_POST['data1']) && !empty($_POST['data1']) || isset($_POST['data2']) && !empty($_POST['data2'])) {
-            if(isset($_POST['data1'])){
-                if($_POST['data1'] && $_POST['data2']){
-                    $sqlRelatorio_sql .= "data BETWEEN '". $_POST['data1']. " 00:00:00' AND '". $_POST['data2']. " 23:59:59'";
-                }else{
-                    $sqlRelatorio_sql .= "data BETWEEN '". $_POST['data1']. " 00:00:00' AND '". $_POST['data1']. " 23:59:59'";
-                }
-            }
-         
-        } else {
-            $sqlRelatorio_sql .= " 1 = 1";
-        }
+    // ====== PAGINAÇÃO ======
+    $limit  = 20;
+    $pagina = isset($_GET['pagination']) ? (int)$_GET['pagination'] : 1;
+    if ($pagina < 1) $pagina = 1;
 
-        $sqlRelatorio =  $sqlRelatorio_sql . " LIMIT $atual, $limit";
-        $sqlPdf =  $sqlRelatorio_sql;
+    // ====== BUSCA TURMAS (para o select) ======
+    $stmt2 = $pdo->prepare("SELECT * FROM turmas");
+    $stmt2->execute();
+    $turmas = $stmt2->fetchAll();
 
-        // var_dump($_POST, $sqlRelatorio);
-        $stmtRelatorio = $pdo->prepare($sqlRelatorio);
-        $stmtRelatorio->execute();
-        $dataRelatorio = $stmtRelatorio->fetchAll();
-        // Criar os dados para passar para o PDF
-        $stmtPdf = $pdo->prepare($sqlPdf);
-        $stmtPdf->execute();
-        $_SESSION['pdf_title'] = "Relatório de atrasos";
-        $_SESSION['pdf'] = $stmtPdf->fetchAll();
+    // ====== MONTA WHERE PARAMETRIZADO ======
+    $where   = [];
+    $params  = [];
 
-        $totalRelatorio = $pdo->prepare($sqlRelatorio_sql);
-        $totalRelatorio->execute();
-        $totalPaginas = round($totalRelatorio->rowCount() / $limit);
-        
-        $css = ['index.css', 'estilo.css'];
-        include("include/header.php");
-        unset($_SESSION['ALUNO']);
-        ?>
+    if (!empty($filterTurma)) {
+        $where[]            = "turma = :turma";
+        $params[':turma']   = $filterTurma;
+    }
+
+    // Datas
+    if (!empty($filterData1) && !empty($filterData2)) {
+        $where[]             = "data BETWEEN :data1 AND :data2";
+        $params[':data1']    = $filterData1 . " 00:00:00";
+        $params[':data2']    = $filterData2 . " 23:59:59";
+    } elseif (!empty($filterData1)) {
+        // Apenas data1 -> considera o dia inteiro
+        $where[]             = "data BETWEEN :data1 AND :data1_end";
+        $params[':data1']    = $filterData1 . " 00:00:00";
+        $params[':data1_end']= $filterData1 . " 23:59:59";
+    } elseif (!empty($filterData2)) {
+        // Apenas data2 -> considera o dia inteiro
+        $where[]              = "data BETWEEN :data2_start AND :data2_end";
+        $params[':data2_start']= $filterData2 . " 00:00:00";
+        $params[':data2_end']  = $filterData2 . " 23:59:59";
+    }
+
+    $baseSql  = " FROM sosatraso";
+    $whereSql = $where ? (" WHERE " . implode(" AND ", $where)) : "";
+
+    // ====== TOTAL DE REGISTROS ======
+    $countSql = "SELECT COUNT(*)" . $baseSql . $whereSql;
+    $stmtCount = $pdo->prepare($countSql);
+    $stmtCount->execute($params);
+    $totalRegistros = (int)$stmtCount->fetchColumn();
+
+    $totalPaginas = max(1, (int)ceil($totalRegistros / $limit));
+    if ($pagina > $totalPaginas) { $pagina = $totalPaginas; }
+    $offset = ($pagina - 1) * $limit;
+
+    // ====== RELATÓRIO (ordem do mais antigo para o mais recente) ======
+    // Obs.: offset/limit são inteiros já validados, então podem ser interpolados
+    $selectSql = "SELECT *" . $baseSql . $whereSql . " ORDER BY data ASC LIMIT $offset, $limit";
+    $stmtRelatorio = $pdo->prepare($selectSql);
+    $stmtRelatorio->execute($params);
+    $dataRelatorio = $stmtRelatorio->fetchAll();
+
+    // ====== DADOS PARA O PDF (mesmo filtro e ordem) ======
+    $pdfSql = "SELECT *" . $baseSql . $whereSql . " ORDER BY data ASC";
+    $stmtPdf = $pdo->prepare($pdfSql);
+    $stmtPdf->execute($params);
+
+    $_SESSION['pdf_title'] = "Relatório de atrasos";
+    $_SESSION['pdf']       = $stmtPdf->fetchAll();
+
+    // ====== QUERY STRING para manter filtros na paginação ======
+    $qs = [];
+    if (!empty($filterTurma)) $qs['turma'] = $filterTurma;
+    if (!empty($filterData1)) $qs['data1'] = $filterData1;
+    if (!empty($filterData2)) $qs['data2'] = $filterData2;
+    $qsBase = http_build_query($qs);
+    $qsSep  = $qsBase ? '&' : '';
+
+    $css = ['index.css', 'estilo.css'];
+    include("include/header.php");
+    unset($_SESSION['ALUNO']);
+?>
 <div class="bg-white w-6xl mx-auto p-6 rounded-lg">
-<p class="text-2xl mx-auto text-center font-black text-marista mb-6">CONSULTAR ALUNOS</p>
-            <form action="relatorio.php" method="post" id="cadastroForm" class="cadastroForm">
-            <div class="formulario">
-                <div class="data">
+    <p class="text-2xl mx-auto text-center font-black text-marista mb-6">CONSULTAR ALUNOS</p>
 
-                    <input class="border w-ms border-gray-400 rounded-md p-3" type="date" name="data1" id="data1" value="<?php echo isset($_POST['data1']) ? $_POST['data1'] : null; ?>"> até
-                    <input class="border w-ms border-gray-400 rounded-md p-3" type="date" name="data2" id="data2" value="<?php echo isset($_POST['data2']) ? $_POST['data2'] : null; ?>">
-                </div>
-                <div class="data">
-                    <select class="border w-md border-gray-400 rounded-md p-3" name="turma" id="turma">
-                        <option value="">Selecionar turma...</option>
-                        <?php
-                        foreach ($turmas as $turma) {
-                        ?>
-                        <option value="<?php echo $turma['id']; ?>" 
-                        <?php 
-                        if(isset($_GET['turma']) || isset($_POST['turma'])){
-                            $tur = isset($_POST['turma']) ? $_POST['turma'] : $_GET['turma'];
-                            echo ($tur == $turma['id']) ? 'selected' : '';
-                        }?>><?php echo $turma['turma']; ?></option>
-                        <?php
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div>
-                    <button  class="bg-marista text-white px-6 py-2 rounded-lg drop-shadow-lg" type="submit">CONSULTAR RELATÓRIO</button>
-                </div>
+    <form action="relatorio.php" method="post" id="cadastroForm" class="cadastroForm">
+        <div class="formulario">
+            <div class="data">
+                <input class="border w-ms border-gray-400 rounded-md p-3" type="date" name="data1" id="data1"
+                       value="<?php echo htmlspecialchars($filterData1 ?: '', ENT_QUOTES); ?>"> até
+                <input class="border w-ms border-gray-400 rounded-md p-3" type="date" name="data2" id="data2"
+                       value="<?php echo htmlspecialchars($filterData2 ?: '', ENT_QUOTES); ?>">
             </div>
+            <div class="data">
+                <select class="border w-md border-gray-400 rounded-md p-3" name="turma" id="turma">
+                    <option value="">Selecionar turma...</option>
+                    <?php foreach ($turmas as $t) { ?>
+                        <option value="<?php echo $t['id']; ?>"
+                            <?php echo (!empty($filterTurma) && (string)$filterTurma === (string)$t['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($t['turma'], ENT_QUOTES); ?>
+                        </option>
+                    <?php } ?>
+                </select>
+            </div>
+            <div>
+                <button class="bg-marista text-white px-6 py-2 rounded-lg drop-shadow-lg" type="submit">
+                    CONSULTAR RELATÓRIO
+                </button>
+            </div>
+        </div>
+    </form>
 
-        </form>
-        <div id="resultados">
+    <div id="resultados">
+        <br><br>
 
-            <br><br>
-
-            
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Turma</th>
-                        <th>Motivo</th>
-                        <th>Data</th>
-                    </tr>
-                </thead>
-                <?php
-                if (!empty($dataRelatorio)) {
-                ?>
-                    <tbody>
-                        <?php foreach ($dataRelatorio as $dado) { ?>
-                            <tr>
-                                <td><?php echo $dado['nome']; ?></td>
-                                <td><?php echo $dado['turma']; ?></td>
-                                <td><?php echo $dado['motivo']; ?></td>
-                                <td><?php
-                                    $data = explode(' ', $dado['data']);
-
-                                    echo implode('/', array_reverse(explode('-', $data[0]))) . ' - ' . $data[1];
-                                    ?></td>
-                            </tr>
-                        <?php } ?>
-                    </tbody>
-                <?php } else { ?>
-                    <tbody>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Turma</th>
+                    <th>Motivo</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <?php if (!empty($dataRelatorio)) { ?>
+                <tbody>
+                    <?php foreach ($dataRelatorio as $dado) { ?>
                         <tr>
-                            <td colspan="4">Sem registro na data selecionada!</td>
+                            <td><?php echo htmlspecialchars($dado['nome'], ENT_QUOTES); ?></td>
+                            <td><?php echo htmlspecialchars($dado['turma'], ENT_QUOTES); ?></td>
+                            <td><?php echo htmlspecialchars($dado['motivo'], ENT_QUOTES); ?></td>
+                            <td>
+                                <?php
+                                    // Formata a data YYYY-MM-DD HH:MM:SS -> DD/MM/YYYY - HH:MM:SS
+                                    $partes = explode(' ', $dado['data']);
+                                    $dataBr = implode('/', array_reverse(explode('-', $partes[0])));
+                                    echo $dataBr . ' - ' . $partes[1];
+                                ?>
+                            </td>
                         </tr>
-                    </tbody>
-                <?php } ?>
-            </table>
-        </div>
-        <div>
-      <nav class="isolate inline-flex -space-x-px rounded-md shadow-xs mx-auto" aria-label="Pagination">
-        <a href="#" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
-          <span class="sr-only">Previous</span>
-          <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon">
-            <path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
-          </svg>
-        </a>
-        <?php for($i = 1; $i <= $totalPaginas; $i++){ ?>
-        <!-- Current: "z-10 bg-indigo-600 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600", Default: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0" -->
-        <a href="<?php echo BASE_ADMIN . 'relatorio.php?pagination=' . $i; ?>" aria-current="page" class="<?php echo (isset($_GET["pagination"]) && $_GET["pagination"] == $i) ? 'bg-marista' : ((!isset($_GET["pagination"]) && $i == 1) ? 'bg-marista' : 'bg-marista2') ; ?> relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"><?php echo $i; ?></a>
-        <?php } ?>
-        <a href="#" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
-          <span class="sr-only">Next</span>
-          <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon">
-            <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
-          </svg>
-        </a>
-      </nav>
-     
+                    <?php } ?>
+                </tbody>
+            <?php } else { ?>
+                <tbody>
+                    <tr>
+                        <td colspan="4">Sem registro na data selecionada!</td>
+                    </tr>
+                </tbody>
+            <?php } ?>
+        </table>
     </div>
-        </div>
 
-        <script>
-            var expanded = false;
+    <!-- Paginação -->
+    <div class="mt-6 flex justify-center">
+        <nav class="isolate inline-flex -space-x-px rounded-md shadow-xs mx-auto" aria-label="Pagination">
 
-            function showCheckboxes() {
-                var checkboxes = document.getElementById("checkboxes");
-                if (!expanded) {
-                    checkboxes.style.display = "block";
-                    expanded = true;
-                } else {
-                    checkboxes.style.display = "none";
-                    expanded = false;
-                }
-            }
-        </script>
+            <!-- Botão Anterior -->
+            <?php if ($pagina > 1) { ?>
+                <a href="relatorio.php?<?php echo $qsBase . $qsSep; ?>pagination=<?php echo $pagina - 1; ?>"
+                   class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-600 ring-1 ring-gray-300 ring-inset hover:bg-gray-50">
+                    <span class="sr-only">Anterior</span>
+                    &#9664;
+                </a>
+            <?php } else { ?>
+                <span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset cursor-not-allowed">
+                    &#9664;
+                </span>
+            <?php } ?>
 
-<br>
-    <center><a href="relatorio_pdf.php" target="_blank">
-        <button class="bg-marista2 text-white px-6 py-2 rounded-lg drop-shadow-lg mt-6" >GERAR PDF</button></center>
-    </a>
+            <!-- Números -->
+            <?php for ($i = 1; $i <= $totalPaginas; $i++) { ?>
+                <a href="relatorio.php?<?php echo $qsBase . $qsSep; ?>pagination=<?php echo $i; ?>"
+                   class="<?php echo ($pagina == $i) ? 'bg-marista text-white' : 'bg-marista2 text-white'; ?> relative inline-flex items-center px-4 py-2 text-sm font-semibold">
+                    <?php echo $i; ?>
+                </a>
+            <?php } ?>
+
+            <!-- Botão Próximo -->
+            <?php if ($pagina < $totalPaginas) { ?>
+                <a href="relatorio.php?<?php echo $qsBase . $qsSep; ?>pagination=<?php echo $pagina + 1; ?>"
+                   class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-600 ring-1 ring-gray-300 ring-inset hover:bg-gray-50">
+                    <span class="sr-only">Próximo</span>
+                    &#9654;
+                </a>
+            <?php } else { ?>
+                <span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset cursor-not-allowed">
+                    &#9654;
+                </span>
+            <?php } ?>
+        </nav>
+    </div>
 
     <br>
-        </div>
-        </body>
+    <center>
+        <a href="relatorio_pdf.php" target="_blank">
+            <button class="bg-marista2 text-white px-6 py-2 rounded-lg drop-shadow-lg mt-6">GERAR PDF</button>
+        </a>
+    </center>
+    <br>
+</div>
 
-        </html>
+<script>
+    // JS antigo (se necessário)
+    var expanded = false;
+    function showCheckboxes() {
+        var checkboxes = document.getElementById("checkboxes");
+        if (!expanded) {
+            checkboxes.style.display = "block";
+            expanded = true;
+        } else {
+            checkboxes.style.display = "none";
+            expanded = false;
+        }
+    }
+</script>
+
+</body>
+</html>
