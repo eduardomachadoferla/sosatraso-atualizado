@@ -9,7 +9,7 @@
   <!-- Menu (começa escondido no mobile) -->
   <ul id="menu" class="menu x-xl hidden md:flex md:flex-row md:space-x-4 ml-auto">
     <li>
-      <a href="<?php echo BASE_ADMIN; ?>total_turmas.php" class="bg-marista2 text-white px-6 py-2 rounded-lg drop-shadow-lg mt-6">
+      <a href="<?php echo BASE_ADMIN; ?>./total_turmas.php" class="bg-marista2 text-white px-6 py-2 rounded-lg drop-shadow-lg mt-6">
         Total por Turmas
       </a>
     </li>

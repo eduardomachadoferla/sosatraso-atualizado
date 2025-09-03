@@ -1,3 +1,37 @@
+<style>
+
+
+.alert {
+    position: fixed; /* Fica sobre o conteúdo */
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    opacity: 0.95;
+    transition: opacity 1s ease, transform 0.5s ease;
+    z-index: 9999;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Sumir suavemente */
+.alert-hide {
+    opacity: 0;
+    transform: translateY(-20px);
+}</style>
+
 <?php
 session_start(); // ESSENCIAL para trabalhar com $_SESSION
 if (isset($_SESSION['mensagem'])) {
@@ -6,7 +40,6 @@ if (isset($_SESSION['mensagem'])) {
 }
 
 include('../../config/conexao.php');
-
 // Redirecionamento se não estiver autenticado
 if (!isset($_SESSION['login']['auth'])) {
     header("Location: " . BASE_ADMIN . 'login.php');
@@ -57,19 +90,16 @@ $totalPaginas = ceil($totalRegistros / $limit);
 <!-- HTML da página -->
 <?php
 if (isset($_SESSION['msg_sucesso'])) {
-    echo '<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert">'
-         . htmlspecialchars($_SESSION['msg_sucesso']) .
-         '</div>';
+    echo '<div class="alert alert-success" id="msg">' . htmlspecialchars($_SESSION['msg_sucesso']) . '</div>';
     unset($_SESSION['msg_sucesso']);
 }
 
 if (isset($_SESSION['msg_erro'])) {
-    echo '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">'
-         . htmlspecialchars($_SESSION['msg_erro']) .
-         '</div>';
+    echo '<div class="alert alert-error" id="msg">' . htmlspecialchars($_SESSION['msg_erro']) . '</div>';
     unset($_SESSION['msg_erro']);
 }
 ?>
+
 
 <div class="bg-white w-6xl mx-auto p-6 rounded-lg">
     <p class="text-2xl mx-auto text-center font-black text-marista mb-6">GERENCIAMENTO USUÁRIOS</p>

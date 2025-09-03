@@ -1,6 +1,5 @@
 <?php
 session_start();
-
 require '../vendor/autoload.php'; // carrega o autoload do composer
 
 use Fpdf\Fpdf; // importa a classe Fpdf com namespace

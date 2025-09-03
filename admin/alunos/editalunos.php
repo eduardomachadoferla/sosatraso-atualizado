@@ -4,7 +4,6 @@ session_start();
 include('../../config/conexao.php');
 include('../../config/base.php');
 
-
 if (!isset($_SESSION['login']['auth'])) {
     header("Location: " . BASE_ADMIN . 'login.php');
     exit();
@@ -38,10 +37,11 @@ if (!$aluno) {
 
 <div class="bg-white max-w-3xl mx-auto p-8 mt-10 rounded-lg shadow-lg">
     <h2 class="text-3xl font-bold mb-6 text-center text-marista">Editar Aluno</h2>
-                   <!-- Precisa ser criado a parte de salar alunos -->
+    
     <form action="./alunos.php" method="post" class="space-y-6">
 
-        <input type="hidden" name="matricula" value="<?= htmlspecialchars($aluno['matricula']) ?>">
+        <!-- Matrícula original (para identificar o registro no banco) -->
+        <input type="hidden" name="matricula_original" value="<?= htmlspecialchars($aluno['matricula']) ?>">
 
         <div>
             <label class="block mb-2 font-medium text-gray-700">Nome:</label>
@@ -74,10 +74,10 @@ if (!$aluno) {
             <label class="block mb-2 font-medium text-gray-700">Matrícula:</label>
             <input 
                 type="text" 
-                name="matricula_exibida" 
+                name="matricula" 
                 value="<?= htmlspecialchars($aluno['matricula']) ?>" 
-                class="w-full border border-gray-300 rounded-md p-3 bg-gray-100 cursor-not-allowed"
-                disabled
+                class="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-marista"
+                required
             >
         </div>
 

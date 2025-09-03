@@ -18,15 +18,14 @@ $pdf->Cell(1, 10, '', 0, 1);
 $pdf->SetFont('Arial', 'B', 9);
 $pdf->Cell(80, 10, 'Nome', 1);  
 $pdf->Cell(20, 10, 'Turma', 1);  
-$pdf->Cell(60, 10, 'Motivo', 1);  
-$pdf->Cell(35, 10, 'Data', 1);  
+$pdf->Cell(60, 10, 'matricula', 1);   
 $pdf->Cell(1, 10, '', 0, 1);  
 
 foreach($datas as $row){
     $nome = mb_convert_encoding($row['nome'] ?? '', 'ISO-8859-1', 'UTF-8');
     $turma = mb_convert_encoding($row['turma'] ?? '', 'ISO-8859-1', 'UTF-8');
-    $motivo = mb_convert_encoding($row['motivo'] ?? '', 'ISO-8859-1', 'UTF-8');
-    $data_completa = $row['data'] ?? '';
+    $matricula = mb_convert_encoding($row['matricula'] ?? '', 'ISO-8859-1', 'UTF-8');
+
 
     // formatar data (de YYYY-MM-DD HH:MM:SS para DD/MM/YYYY - HH:MM:SS)
     $data_formatada = '';
@@ -37,8 +36,7 @@ foreach($datas as $row){
 
     $pdf->Cell(80, 10, $nome, 1);  
     $pdf->Cell(20, 10, $turma, 1);  
-    $pdf->Cell(60, 10, $motivo, 1);  
-    $pdf->Cell(35, 10, $data_formatada, 1);  
+    $pdf->Cell(60, 10, $matricula, 1);    
     $pdf->Cell(1, 10, '', 0, 1);
 }
 
