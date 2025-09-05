@@ -1,7 +1,7 @@
-<?php
-include('../config/base.php');
+    <?php
+    include('../config/base.php');
 
-session_start();
-session_destroy();
+    session_start();
+    session_destroy();
 
-header("Location: " . BASE_ADMIN . 'login.php');
+    header("Location: " . BASE_ADMIN . 'login.php');
