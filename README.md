@@ -7,6 +7,10 @@ O **SOS ATRASO** é um sistema desenvolvido para **automatizar o registro de atr
 Por meio de uma interface simples e intuitiva, os alunos registram seus atrasos ao chegarem na escola. O sistema captura informações como nome, turma, motivo do atraso e horário de entrada, gerando um **ticket impresso** que serve como comprovante.
 
 ---
+## Figma
+https://www.figma.com/design/D95B1wbnaliC835eAI2tjW/Untitled?node-id=0-1&t=4GpDZRwwxpMmE7i0-1
+
+---
 
 ## 🎯 Objetivos
 
