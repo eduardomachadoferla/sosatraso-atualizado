@@ -7,9 +7,6 @@
 
     $permissao = ['admin', 'coordenador'];
 
-    if (!in_array($_SESSION['login']['permissao'], $permissao)) {
-        header("Location: " . BASE_ADMIN . 'index.php');
-    }
 
     $sql2 = 'SELECT * FROM turmas';
     $stmt2 = $pdo->prepare($sql2);
