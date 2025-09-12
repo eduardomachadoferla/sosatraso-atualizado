@@ -20,7 +20,8 @@
         </a>
       </li>
 
-      <?php if ($_SESSION['login']['permissao'] === 'admin'): ?>
+      <?php if ($_SESSION['login']['permissao'] === 'admin' || strpos($_SESSION['login']['permissao'], "administrar_usuarios") !== false): ?>
+
         <li>
           <a href="<?php echo BASE_ADMIN; ?>alunos/alunos.php" class="bg-marista2 text-white px-6 py-2 rounded-lg drop-shadow-lg mt-6">
             Alunos
@@ -39,7 +40,7 @@
         </a>
       </li>
     </ul>
-
+  
     <!-- Botão hamburguer (aparece só no mobile) -->
     <button id="menu-btn" class="block md:hidden ml-auto mt-6 text-white text-3xl focus:outline-none" aria-label="Abrir menu">
       &#9776;
