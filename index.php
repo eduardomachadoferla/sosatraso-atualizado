@@ -87,6 +87,26 @@ function mostrarCaixaTexto() {
         outroTextInput.removeAttribute("required");
     }
 }
+
+function validarNome() {
+    var nome = document.getElementById("nome").value;
+    if (nome.trim() === "") return;
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "buscar_alunos.php?validar=1&nome=" + encodeURIComponent(nome), true);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            if (xhr.responseText.trim() === "invalido") {
+                document.getElementById("mensagemErro").innerText = "⚠ Nome não encontrado. Selecione um aluno válido!";
+                document.getElementById("nome").value = "";
+                document.getElementById("turma").value = "";
+            } else {
+                document.getElementById("mensagemErro").innerText = "";
+            }
+        }
+    };
+    xhr.send();
+}
 </script>
 </body>
 </html>
