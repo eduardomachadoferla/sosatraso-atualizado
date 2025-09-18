@@ -29,12 +29,40 @@ if (!$usuario) {
     exit();
 }
 
+// Permissões atuais (string → array)
+$permissoesAtuais = explode(',', $usuario['permissao']);
+
+// Setores atuais (string → array)
+$setoresAtuais = explode(',', $usuario['setor']);
+
+// Lista de permissões possíveis
+$listaPermissoes = [
+    'admin' => 'Admin',
+    'gerenciar_alunos' => 'Gerenciar alunos',
+    'ver_relatorios' => 'Ver relatórios',
+    'editar_turmas' => 'Editar turmas'
+];
+
+// Lista de setores possíveis
+$listaSetores = [
+    'Admin' => 'Admin',
+    'Educador' => 'Educador',
+    'Coordenação' => 'Coordenação',
+];
+
 // Atualizar dados
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome = trim($_POST['nome']);
     $email = trim($_POST['email']);
-    $setor = trim($_POST['setor']);
-    $permissao = trim($_POST['permissao']);
+
+    // Pega setores enviados
+    $setores = isset($_POST['setor']) ? $_POST['setor'] : [];
+    $setorStr = implode(',', $setores);
+
+    // Pega permissões enviadas
+    $permissoes = isset($_POST['permissao']) ? $_POST['permissao'] : [];
+    $permissaoStr = implode(',', $permissoes);
+
     $senha = trim($_POST['senha']);
 
     if (!empty($senha)) {
@@ -45,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $params = [
             ':nome' => $nome,
             ':email' => $email,
-            ':setor' => $setor,
-            ':permissao' => $permissao,
+            ':setor' => $setorStr,
+            ':permissao' => $permissaoStr,
             ':senha' => $senhaHash,
             ':id' => $id,
         ];
@@ -57,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $params = [
             ':nome' => $nome,
             ':email' => $email,
-            ':setor' => $setor,
-            ':permissao' => $permissao,
+            ':setor' => $setorStr,
+            ':permissao' => $permissaoStr,
             ':id' => $id,
         ];
     }
@@ -99,24 +127,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             >
         </div>
 
+        <!-- Checkboxes de Setores -->
         <div>
-            <label class="block mb-2 font-medium text-gray-700">Setor:</label>
-            <input 
-                type="text" 
-                name="setor" 
-                value="<?= htmlspecialchars($usuario['setor']) ?>" 
-                class="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-marista"
-            >
+            <label class="block mb-2 font-medium text-gray-700">Setores:</label>
+            <div class="space-y-2">
+                <?php foreach ($listaSetores as $valor => $label): ?>
+                    <label class="inline-flex items-center">
+                        <input 
+                            type="checkbox" 
+                            name="setor[]" 
+                            value="<?= $valor ?>"
+                            class="mr-2"
+                            <?= in_array($valor, $setoresAtuais) ? 'checked' : '' ?>
+                        >
+                        <?= $label ?>
+                    </label><br>
+                <?php endforeach; ?>
+            </div>
         </div>
 
+        <!-- Checkboxes de Permissões -->
         <div>
-            <label class="block mb-2 font-medium text-gray-700">Permissão:</label>
-            <input 
-                type="text" 
-                name="permissao" 
-                value="<?= htmlspecialchars($usuario['permissao']) ?>" 
-                class="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-marista"
-            >
+            <label class="block mb-2 font-medium text-gray-700">Permissões:</label>
+            <div class="space-y-2">
+                <?php foreach ($listaPermissoes as $valor => $label): ?>
+                    <label class="inline-flex items-center">
+                        <input 
+                            type="checkbox" 
+                            name="permissao[]" 
+                            value="<?= $valor ?>"
+                            class="mr-2"
+                            <?= in_array($valor, $permissoesAtuais) ? 'checked' : '' ?>
+                        >
+                        <?= $label ?>
+                    </label><br>
+                <?php endforeach; ?>
+            </div>
         </div>
 
         <div>
