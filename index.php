@@ -11,6 +11,13 @@ $turmas = $stmt2->fetchAll();
 
 $css = ['geral.css', 'index.css', 'estilo.css'];
 
+    
+    if (isset($_SESSION['erro'])) {
+        echo '<div style="color:red; text-align:center; margin-bottom:10px; font-weight:bold;">'
+             . $_SESSION['erro'] . '</div>';
+        unset($_SESSION['erro']);
+    }
+   
 unset($_SESSION['ALUNO']);
 ?>
 
