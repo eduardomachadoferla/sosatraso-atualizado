@@ -43,7 +43,7 @@
     $dataRelatorio = $stmtRelatorio->fetchAll();
 
     // Total para paginação
-    $sqlTotal = "SELECT COUNT(*) as total FROM sosatraso $filtro_nome";
+    $sqlTotal = "SELECT COUNT(*) as total FROM alunos $filtro_nome";
     $stmtTotal = $pdo->prepare($sqlTotal);
     $stmtTotal->execute($params);
     $totalRegistros = $stmtTotal->fetch()['total'];
