@@ -123,7 +123,7 @@
                 | <span class="italic">Projeto SOS Atraso</span>
             </p>
             <small class="block text-xs text-gray-400 mt-1">
-                &copy; <?php echo date("Y"); ?> Todos os direitos reservados a Eduardo Machado
+                &copy; <?php echo date("Y"); ?> Todos os direitos reservados a Marista Escola Social Cascavel
             </small>
         </footer>
     </body>
