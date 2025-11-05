@@ -6,8 +6,8 @@
     date_default_timezone_set('America/Sao_Paulo');
 
     // Evita redefinir as constantes caso já estejam definidas
-   if (!defined('BASE_URL')) define('BASE_URL', 'http://192.168.1.2/sosatraso-atualizado/');
-if (!defined('BASE_ADMIN')) define('BASE_ADMIN', 'http://192.168.1.2/sosatraso-atualizado/admin/');
+    if (!defined('BASE_URL')) define('BASE_URL', 'http://192.168.1.2/sosatraso-atualizado/');
+    if (!defined('BASE_ADMIN')) define('BASE_ADMIN', 'http://192.168.1.2/sosatraso-atualizado/admin/');
     if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
     if (!defined('DB_NAME')) define('DB_NAME', 'sosatraso');
     if (!defined('DB_USER')) define('DB_USER', 'root');
