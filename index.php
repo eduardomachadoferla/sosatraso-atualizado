@@ -115,7 +115,7 @@
         xhr.send();
     }
     </script>
-    <footer class="bg-marista text-center py-3 mt-20 ">
+     <footer class="bg-marista text-center py-3 mt-35 ">
             <p class="text-sm text-gray-500">
                 Criado por 
                 <strong class="text-gray-700">Eduardo Machado Ferla</strong> e 
@@ -123,7 +123,7 @@
                 | <span class="italic">Projeto SOS Atraso</span>
             </p>
             <small class="block text-xs text-gray-400 mt-1">
-                &copy; <?php echo date("Y"); ?> Todos os direitos reservados a Marista Escola Social Cascavel
+                &copy; <?php echo date("Y"); ?> Todos os direitos reservados a Marista Escola Social Cascavel | <a href="http://localhost/sosatraso-main-verificar/admin/">Admin</a>
             </small>
         </footer>
     </body>
